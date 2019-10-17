@@ -1,0 +1,12 @@
+In this directory you can find source code and resources related to
+ConfD Application note:
+
+Using TACACS+ Authentication with ConfD
+
+The note can be downloaded from here:
+https://info.tail-f.com/using-tacacs-authentication-with-confd
+
+See LICENSE file in the root of this directory.
+
+The source code (authorization script, Gradle file for docker environment)
+is located in the 'src' directory.

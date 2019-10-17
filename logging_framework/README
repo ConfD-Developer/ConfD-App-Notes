@@ -1,0 +1,17 @@
+In this directory you can find source code and resources related to
+ConfD Application note:
+
+Application Logging Framework for ConfD
+
+The note can be downloaded from here:
+https://info.tail-f.com/app_logging_framework
+
+See LICENSE file in the root of this directory.
+
+The source code (logging framework header file) is located
+in the 'src' directory.
+
+The example showing how to use the logging framework is part fo
+ConfD/ConfD basic distribution and is located in the directory:
+
+examples.confd/logging_framework
