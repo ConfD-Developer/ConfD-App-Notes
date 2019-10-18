@@ -1,0 +1,46 @@
+An image for building ConfD client applications
+===============================================
+
+Summary
+-------
+Create a ConfD client application builder image
+
+Prerequisites
+-------------
+A ConfD installer.
+
+Steps
+-----
+0. Copy the ConfD installer to resources/confd/<version>
+
+1. Build the application builder container
+
+$ docker build --tag debian-sdk:v7.2.0.1 [--build-arg ver=7.2.0.1] .
+
+2. Build a ConfD client application by running the confd-deb-sdk
+   container while mounting the directory where the application
+   resides in the container.  The resulting client application binary
+   is sent to stdout as a tar-ball.
+
+$ docker run --rm --env STDOUT=1 -v /path/to/app:/app confd-deb-sdk:v7.2.0.1 /app > build-result.tgz
+
+3. It's also possible to keep the container around and copy the
+   resulting tar-ball using the docker cp command from the container
+   to the host.  The environment variable STDOUT=1 should not be set
+   in this case:
+
+$ docker run --name confd-deb-sdk confd-deb-sdk:v7.1
+$ docker cp confd-deb-sdk:/app.tgz .
+$ docker container rm confd-deb-sdk
+
+The 'resources/builder' script assumes that the client application
+directory contains a Makefile with a 'clean' target and an 'all'
+target and that running 'all' is all that is needed to build the
+client application.  The 'resources/builder' script also assumes that
+all that is required from the build are the executable file(s) and
+fxs-file(s).  If one or both of these assumptions are wrong, you
+should update the 'resources/builder' script to match your
+requirements.
+
+Directories containing common include files must also be mounted in
+the container.
