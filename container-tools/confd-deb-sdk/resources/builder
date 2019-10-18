@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# -*-  Mode: Shell-script -*-
+# builder --- ConfD client application buider
+
+set -eo pipefail; [[ "$TRACE" ]] && set -x
+
+# builder ends here
+main() {
+    {
+        cd $1
+        make clean all
+        mkdir /build-result
+        cp -f $(find . -maxdepth 1 -type f -executable) $(find . -name *.fxs) /build-result
+    } >&2
+
+    [[ $STDOUT ]] && tar czf - -C / build-result
+}
+
+main "$@"
