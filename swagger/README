@@ -1,0 +1,12 @@
+In this directory you can find source code and resources related to
+ConfD Application note:
+
+RESTCONF, YANG and Swagger
+
+The note can be downloaded from here:
+https://info.tail-f.com/appnote-restconf-yang-swagger
+
+See LICENSE file in the root of this GIT repository.
+
+The source code (example RESTCONF python script using
+generated Swagger python client API) is located in the 'src' directory.

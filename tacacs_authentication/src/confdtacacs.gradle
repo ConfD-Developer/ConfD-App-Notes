@@ -1,0 +1,160 @@
+/**
+ *  Build ConfD (Basic) + TACACS+ docker Linux environment
+ *  accessible with Ssh with use of TailfDockerPlugin.
+ *  Possible usage :
+ *
+ *  Build:
+ gradle -b confdtacacs.gradle clean buildConfdTacacs \
+ -PCONFD_VERSION_TF=7.1 -PCONFD_EXAMPLES_TF=false \
+ -PPACKAGE_DIR_TF=<dir with confd installation files>
+ *
+ *  Run:
+ docker run -d -p 3322:22 --name confdtac \
+ --hostname confdtac confdtacimg
+
+ *  Ssh into running container:
+ ssh root@localhost -p 3322
+ *  OR
+ ssh -o UserKnownHostsFile=/dev/null \
+ -o StrictHostKeyChecking=no root@localhost -p 3322
+ *
+ * Check TACACS+ server is running:
+ pgrep -lf tac_plus
+ *
+ *  Stop and clean:
+ docker stop confdtac; docker rm confdtac; \
+ docker rmi confdtacimg
+ *
+ * Note:
+ * It is important to have 'clean' target in the gradle command
+ * ~/.ssh/id_rsa.pub has to be present as is copied to the
+ *  docker image
+ * -PCONFD_VERSION_TF=7.1 can be skipped, then default confd
+ *   version from TailfDockerfileTask is used
+ * -PPACKAGE_DIR_TF can be skipped, if ConfD installation
+ *    files are in ${HOME}/tailf
+ * -PCONFD_EXAMPLES_TF=true (or remove this from command line)
+ *   -install also examples and development environment
+ *    (image is bigger)
+ * -PIMAGE_TAG=... can be used to overwrite default
+ *   image name "confdtacimg"
+ * Dockerfile is located in file
+ *    'build/confdimg/confdtac.dockerfile'
+ */
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.novakmi:tailfdocker:0.6.1'
+    }
+}
+
+apply plugin: 'base'
+apply plugin: 'com.bmuschko.docker-remote-api'
+apply plugin: com.github.novakmi.tailfdocker.TailfDockerPlugin
+
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+import com.github.novakmi.tailfdocker.TailfDockerfileTask
+
+def tacsconf = "/etc/tacacs+/tac_plus.conf"
+
+def tailfService = { myDelegate, args ->
+    delegate = myDelegate
+    if (args.tailfgroups || args.tailfuid || args.tailfgid || args.tailfhome) {
+        runCommand "echo '   service = tailf {'  >> $tacsconf"
+        if (args.tailfgroups) {
+            runCommand "echo '       groups = \"$args.tailfgroups\"'  >> $tacsconf"
+        }
+        if (args.tailfuid) {
+            runCommand "echo '       uid = \"$args.tailfuid\"'  >> $tacsconf"
+        }
+        if (args.tailfgid) {
+            runCommand "echo '       gid = \"$args.tailfgid\"'  >> $tacsconf"
+        }
+        if (args.tailfhome) {
+            runCommand "echo '       home = \"$args.tailfhome\"'  >> $tacsconf"
+        }
+        runCommand "echo '   }'  >> $tacsconf"
+    }
+}
+
+def addGroup = { myDelegate, groupname, args ->
+    delegate = myDelegate
+    runCommand "echo '' >> $tacsconf"
+    runCommand "echo 'group = $groupname {' >> $tacsconf"
+    tailfService(delegate, args)
+    runCommand "echo '}'  >> $tacsconf"
+}
+
+def addUser = { myDelegate, username, password, args ->
+    delegate = myDelegate
+    runCommand "echo '' >> $tacsconf"
+    runCommand "echo 'user = $username {' >> $tacsconf"
+    if (args.name) {
+        runCommand "echo '   name = \"$args.name\"'  >> $tacsconf"
+    }
+    runCommand "echo '   login =  cleartext \"$password\"'  >> $tacsconf"
+    if (args.group) {
+        runCommand "echo '   member = $args.group'  >> $tacsconf"
+    }
+    tailfService(delegate, args)
+
+    runCommand "echo '}'  >> $tacsconf"
+}
+
+def setupTacacspServer = { myDelegate ->
+    delegate = myDelegate
+    addUser(delegate, "confdtester", "confd",
+            [tailfgroups: "user public", tailfuid: "1000",
+             tailfgid: "100", tailfhome: "/tmp"])
+    addUser(delegate, "confdadmin", "adminconfd", [ group: "admin"])
+    addGroup(delegate, "admin", [tailfgroups: "admin"])
+    addGroup(delegate, "public",
+            [tailfgroups: "public", tailfuid: "9000",
+             tailfgid: "100", tailfhome: "/tmp/public"])
+}
+
+def installTacacspClient = { myDelegate ->
+    delegate = myDelegate
+    runCommand "pip install tacacs_plus"
+}
+
+task createConfdTacacs(type: TailfDockerfileTask) {
+    tag = getProp("IMAGE_TAG", "confdtacimg")
+    packages += utilsPkgs + buildPkgs +
+            ["tacacs+", "git", "python-pip", "ipython"]
+    configSsh rootAccess: "confd", keys: [true: ["root"] as Set]
+    confd = [:]
+    exposePort 22
+    instructionsLast = {
+        copyFilesToContext(["./auth.py"])
+        copyFile("auth.py", "${confdDir}/bin")
+        runCommand("chmod +x ${confdDir}/bin/auth.py")
+        setupTacacspServer(delegate)
+        installTacacspClient(delegate)
+        editConfdConf("${confdDir}/etc/confd/confd.conf", [
+                "/confdConfig/aaa/authOrder"
+                                                         : '"externalAuthentication localAuthentication"',
+                "/confdConfig/aaa/externalAuthentication/enabled"
+                                                         : "true",
+                "/confdConfig/aaa/externalAuthentication/executable"
+                                                         : "${confdDir}/bin/auth.py",
+                "/confdConfig/logs/auditLog/enabled": "true",
+                "/confdConfig/logs/auditLog/file/enabled": "true"
+        ])
+    }
+    //start SSH, ConfD and TACACS+ daemon
+    supervisor = [supervisorSsh, supervisorConfD,
+                  [program: "tacacsp", command: "service tacacs_plus start"]
+    ]
+}
+
+task buildConfdTacacs(type: DockerBuildImage) {
+    def dep = createConfdTacacs
+    dependsOn dep
+    dockerFile = dep.destFile
+    tags = [dep.tag]
+    inputDir = new File(dep.getDestDir())
+}
