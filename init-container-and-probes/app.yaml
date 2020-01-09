@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  selector:
+    matchLabels:
+      app: app
+      tier: backend
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: app
+        tier: backend
+    spec:
+      shareProcessNamespace: true
+      volumes:
+      - name: secret-volume
+        secret:
+          secretName: app-secrets
+      initContainers:
+      - name: wait-for-service
+        image: alpine:3.8
+        command:
+        - sh
+        - "-c"
+        - "until nslookup confd 2> /dev/null; do echo \"waiting for the confd service...\"; sleep 2; done; echo done"
+      - name: wait-for-phase2
+        image: confd_cmd:v7.3
+        command:
+        - sh
+        - "-c"
+        - "until confd_cmd -a confd -c get_phase 2> /dev/null | grep -q \"phase: 2\"; do echo \"Waiting for confd to reach phase2...\"; sleep 2; done; echo done"
+        env:
+        - name: CONFD_IPC_ACCESS_FILE
+          value: "/app/secrets/access.txt"
+        volumeMounts:
+        - name: secret-volume
+          mountPath: "/app/secrets"
+          readOnly: true
+      containers:
+      - name: app
+        image: modifications-subscriber:v7.3
+        env:
+        - name: CONFD_IPC_ACCESS_FILE
+          value: "/app/secrets/access.txt"
+        - name: TINI_SUBREAPER
+          value: ""
+        args:
+        - "modifications-subscriber"
+        - "-a"
+        - "confd"
+        volumeMounts:
+        - name: secret-volume
+          mountPath: "/app/secrets"
+          readOnly: true
