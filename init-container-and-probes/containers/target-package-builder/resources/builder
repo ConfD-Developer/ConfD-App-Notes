@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # -*-  Mode: Shell-script -*-
 # builder --- ConfD target installation package builder
 
@@ -65,12 +65,6 @@ main() {
     {
         :
         sed -i 's:<loadPath>:\n  <!-- Allow IPC connections from non-localhost clinets -->\n  <confdIpcAddress>\n    <ip>0.0.0.0</ip>\n  </confdIpcAddress>\n\n  <loadPath>:' /confd/etc/confd/confd.conf
-
-        # In order to get libcrypto 1.1 support we must rebuild libconfd.
-        [ $LIBCRYPTO11 ] && {
-            echo "Building libconfd for OpenSSL 1.1 (this could take a minute or two)..."
-            (cd $CONFD_DIR/libconfd && make install install_crypto &> /dev/null)
-        }
 
         # By default we include the minimal_installation including
         # support for NETCONF, RESTCONF and CLI using the built-in SSH
