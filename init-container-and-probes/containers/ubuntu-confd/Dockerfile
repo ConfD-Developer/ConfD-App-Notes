@@ -19,7 +19,7 @@ RUN apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/*
 # We will run ConfD as a non-root user.
 RUN addgroup confd
 RUN useradd confd -g confd
-RUN mkdir -p ${CONFD_DIR} && chown confd:confd /confd
+RUN mkdir -p ${CONFD_DIR} && chown confd:confd ${CONFD_DIR}
 
 # Install ConfD in the container.  Note that this isn't a regular ConfD "installler"
 # installation, instead we only include the files required for a minimal
