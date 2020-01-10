@@ -1,8 +1,0 @@
-ConfD Client Application Image
-==============================
-
-Get the example files for the image
------------------------------------
-$ ./getexample.sh
-
-Note that the example-builder must al ready exist.
