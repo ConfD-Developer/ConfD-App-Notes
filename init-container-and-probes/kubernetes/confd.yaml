@@ -1,0 +1,152 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: confd
+  labels:
+    app: confd
+spec:
+  selector:
+    app: confd
+    tier: frontend
+  ports:
+  - name: "netconf"
+    port: 2022
+  - name: "cli"
+    port: 2024
+  - name: "ipc"
+    port: 4565
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: confd-pv-claim
+  labels:
+    app: confd
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Mi
+---
+apiVersion: extensions/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: restrict-root
+spec:
+  privileged: false
+  runAsUser:
+    rule: MustRunAsNonRoot
+  seLinux:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  volumes:
+  - '*'
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: confd
+spec:
+  serviceName: "confd"
+  selector:
+    matchLabels:
+      app: confd
+      tier: frontend
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: confd
+        tier: frontend
+    spec:
+      shareProcessNamespace: true
+      volumes:
+      - name: cdb-volume
+        persistentVolumeClaim:
+          claimName: confd-pv-claim
+      - name: secrets-volume
+        secret:
+          secretName: confd-secrets
+      - name: models-volume
+        configMap:
+          name: models
+      - name: config-volume
+        configMap:
+          name: init-config
+      initContainers:
+      - name: init-confd
+        image: ubuntu:18.04
+        volumeMounts:
+        - name: cdb-volume
+          mountPath: "/confd/confd-cdb"
+        - name: config-volume
+          mountPath: "/confd/init"
+          readOnly: true
+        command:
+        - "cp"
+        - "-v"
+        - "/confd/init/aaa_init.xml"
+        - "/confd/confd-cdb"
+      containers:
+      - name: confd
+        image: ubuntu-confd:v7.3
+        args:
+        - "/confd/bin/confd"
+        - "--foreground"
+        - "--conf"
+        - "/confd/secrets/confd.conf"
+        - "--addloadpath"
+        - "/confd/models"
+        - "--addloadpath"
+        - "/confd/secrets"
+        - "--addloadpath"
+        - "/confd/etc/confd"
+        env:
+        - name: CONFD_IPC_ACCESS_FILE
+          value: "/confd/secrets/access.txt"
+        ports:
+        - containerPort: 2022
+        - containerPort: 2024
+        - containerPort: 4565
+        volumeMounts:
+        - name: cdb-volume
+          mountPath: "/confd/confd-cdb"
+        - name: config-volume
+          mountPath: "/confd/init"
+          readOnly: true
+        - name: models-volume
+          mountPath: "/confd/models"
+          readOnly: true
+        - name: secrets-volume
+          mountPath: "/confd/secrets"
+          readOnly: true
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - "confd"
+              - "--verbose"
+              - "--stop"
+        livenessProbe:
+          exec:
+            command:
+            - "confd"
+            - "--status"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            # Check we can execute queries over TCP (skip-networking is off).
+            command:
+            - sh
+            - "-c"
+            - "confd_cmd -c get_phase | grep -q \"phase: 2\""
+          initialDelaySeconds: 5
+          periodSeconds: 2
+          timeoutSeconds: 1
