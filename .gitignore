@@ -1,2 +1,6 @@
+**/confd/*/
+**/confd-target.tgz
+**/build-result/*
 **/resources/*
+!builder
 !.gitkeep

@@ -1,0 +1,103 @@
+A minimal ConfD image
+=====================
+
+Build a ConfD docker containr based on Alpine Linux.
+
+Prerequisites
+-------------
+
+A tar-ball containing the files for a minimal ConfD target
+installation as described in `section 32.2 Installing ConfD on a
+target system from the ConfD User Guide`.  Note that for older ConfD
+releases, target installation is described in different section number
+in the UG.  Also note that the exact list files required for target
+installation sometimes change between releases, this package includes
+target package file lists for ConfD 6.7.x and ConfD 7.x.
+
+Dockerfile and instructions for a container that can be used to create
+the target installation tar-ball can be found in the
+`../target-package-builder` directory.
+
+Steps
+-----
+1. Drop the target installation package into the resources directory.
+2. Create the ConfD image
+
+    $ docker build --tag alpine-confd:v7.3 .
+
+3. Run the docker image and expose the NETCONF, CLI and internal IPC ports.
+
+    $ docker run -it --rm -p 2022:2022 -p 2024:2024 -p 4565:4565 --init confd:v<version>
+    confd[7]: - Starting ConfD vsn: 7.3
+    confd[7]: - Loading file confd.fxs
+    confd[7]: - Loading file ietf-yang-types.fxs
+    confd[7]: - Loading file ietf-inet-types.fxs
+    confd[7]: - Loading file confd_cfg.fxs
+    confd[7]: - Loading file config.fxs
+    confd[7]: - Loading file netconf.fxs
+    ...
+    confd[7]: - Loading file /confd/etc/confd/tailf-webui.fxs
+    confd[7]: - Loading file /confd/etc/confd/tailf-rollback.fxs
+    confd[7]: - Loading file /confd/etc/confd/tailf-kicker.fxs
+    confd[7]: - Loading file /confd/etc/confd/tailf-aaa.fxs
+    confd[7]: - Loading file /confd/etc/confd/confd.ccl
+    confd[7]: - Starting to listen for Internal IPC on 0.0.0.0:4565
+
+4. Test the NETCONF interface
+
+    $ netconf-console --hello
+    <?xml version="1.0" encoding="UTF-8"?>
+    <hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+      <capabilities>
+        <capability>urn:ietf:params:netconf:base:1.0</capability>
+        <capability>urn:ietf:params:netconf:base:1.1</capability>
+        <capability>urn:ietf:params:netconf:capability:writable-running:1.0</capability>
+        ...
+        <capability>urn:ietf:params:xml:ns:yang:ietf-yang-types?module=ietf-yang-types&amp;revision=2013-07-15</capability>
+        <capability>urn:ietf:params:xml:ns:netconf:base:1.0?module=ietf-netconf&amp;revision=2011-06-01</capability>
+        <capability>urn:ietf:params:xml:ns:yang:ietf-netconf-with-defaults?module=ietf-netconf-with-defaults&amp;revision=2011-06-01</capability>
+      </capabilities>
+      <session-id>12</session-id>
+    </hello>
+
+5. Test the CLI interface
+
+    $ ssh -p 2024 admin@localhost
+    admin@localhost's password:
+    Welcome to the ConfD CLI
+    admin connected from 172.17.0.1 using ssh on 6da798950429
+    admin@6da798950429 16:50:14> ?
+    Possible completions:
+      clear      - Clear parameter
+      commit     - Confirm a pending commit
+      compare    - Compare running configuration to another configuration or a file
+      configure  - Manipulate software configuration information
+      describe   - Display transparent command information
+      exit       - Exit the management session
+      file       - Perform file operations
+      help       - Provide help information
+      id         - Show user id information
+      monitor    - Real-time debugging
+      ping       - Ping a host
+      quit       - Exit the management session
+      request    - Make system-level requests
+      script     - Script actions
+      set        - Set CLI properties
+      set-path   - Set relative show path
+      show       - Show information about the system
+      source     - File to source
+      top        - Exit to top level and optionally run command
+      traceroute - Trace the route to a remote host
+      up         - Exit one level of configuration
+    admin@6da798950429 16:50:14>
+
+Note 1: the default CLI is Juniper style.  This is easy to change, see
+the `confd.conf(5)` man-page.
+
+Note 2: In order to make it easy to run a quick test as I did here,
+this container use default locations for CDB and other state
+(`$CONFD_DIR/var/confd/cdb`, `$CONFD_DIR/etc/confdconfd.conf`, etc).
+This is obviously not ideal and in production all/most of these should
+reside in separate volumes outside the running container.  This is
+easily achieved by passing a different `confd.conf` location when
+starting ConfD.

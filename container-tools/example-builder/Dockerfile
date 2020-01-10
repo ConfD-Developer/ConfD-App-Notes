@@ -10,7 +10,7 @@ LABEL maintainer="jojohans@cisco.com"
 
 # Default to latest ConfD.  Override on the command line with --build-arg
 # ver=<version>
-ARG ver=7.1
+ARG ver=7.3
 
 ENV CONFD_DIR=/confd LD_LIBRARY_PATH=/confd/lib PATH=/confd/bin:$PATH
 
@@ -21,9 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         openssh-client && mkdir -p ${CONFD_DIR}
 
 # Install ConfD in the container.
-COPY confd-$ver/* /tmp/
+COPY resources/* /tmp
 RUN /tmp/confd-$ver.linux.x86_64.installer.bin --skip-docs /confd
-COPY resources/* /
 
 # Cleanup
 RUN apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

@@ -1,4 +1,3 @@
-.gitignore
 .dockerignore
 build-result
-README
+README.md
