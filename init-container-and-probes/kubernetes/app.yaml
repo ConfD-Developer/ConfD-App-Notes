@@ -20,14 +20,8 @@ spec:
         secret:
           secretName: app-secrets
       initContainers:
-      - name: wait-for-service
-        image: alpine:3.8
-        command:
-        - sh
-        - "-c"
-        - "until nslookup confd 2> /dev/null; do echo \"waiting for the confd service...\"; sleep 2; done; echo done"
       - name: wait-for-phase2
-        image: confd_cmd:v7.3
+        image: confd-cmd:v7.3
         command:
         - sh
         - "-c"
