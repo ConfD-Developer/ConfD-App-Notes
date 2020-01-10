@@ -80,7 +80,7 @@ spec:
           name: init-config
       initContainers:
       - name: init-confd
-        image: alpine:3.8
+        image: ubuntu:18.04
         volumeMounts:
         - name: cdb-volume
           mountPath: "/confd/confd-cdb"
