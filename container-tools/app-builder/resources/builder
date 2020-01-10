@@ -15,6 +15,7 @@ main() {
     } >&2
 
     [[ $STDOUT ]] && tar czf - -C / build-result
+    make clean
 }
 
 main "$@"
