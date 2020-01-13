@@ -39,8 +39,6 @@ spec:
         env:
         - name: CONFD_IPC_ACCESS_FILE
           value: "/app/secrets/access.txt"
-        - name: TINI_SUBREAPER
-          value: ""
         args:
         - "modifications-subscriber"
         - "-a"
