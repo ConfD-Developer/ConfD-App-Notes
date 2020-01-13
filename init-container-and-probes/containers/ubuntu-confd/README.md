@@ -20,13 +20,15 @@ tar-ball can be found in the `../target-package-builder` directory.
 Steps
 -----
 1. Drop the target installation package into the resources directory.
+    $ docker run --rm --env STDOUT=1 target-package-builder:v7.3 > resources/confd-target.tgz
+
 2. Create the ConfD image
 
     $ docker build --tag ubuntu-confd:v7.3 .
 
 3. Run the docker image and expose the NETCONF, CLI and internal IPC ports.
 
-    $ docker run -it --rm -p 2022:2022 -p 2024:2024 -p 4565:4565 --init confd:v7.1
+    $ docker run -it --rm -p 2022:2022 -p 2024:2024 -p 4565:4565 --init confd:v7.3
     confd[7]: - Starting ConfD vsn: 7.3
     confd[7]: - Loading file confd.fxs
     confd[7]: - Loading file ietf-yang-types.fxs
