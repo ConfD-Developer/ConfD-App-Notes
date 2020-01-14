@@ -5,6 +5,11 @@ FROM ubuntu:18.04
 LABEL description="Docker image that demonstrates how to run ConfD inside a Docker container."
 LABEL maintainer="jojohans@cisco.com"
 
+# Default name of the ConfD target installation package is
+# `confd-target.tgz`, override on the command line with `--build-arg
+# targetpkg=my-pkg-name.txz`.
+ARG targetpkg=confd-target.tgz
+
 # The environment needed by ConfD
 ENV CONFD_DIR=/confd LD_LIBRARY_PATH=/confd/lib PATH=/confd/bin:$PATH
 
@@ -21,13 +26,14 @@ RUN addgroup confd
 RUN useradd confd -g confd
 RUN mkdir -p ${CONFD_DIR} && chown confd:confd ${CONFD_DIR}
 
-# Install ConfD in the container.  Note that this isn't a regular ConfD "installler"
-# installation, instead we only include the files required for a minimal
-# target installation as described in section 31.3. Installing ConfD on a
-# target system in the ConfD User Guide.
-COPY --chown=confd:confd resources/confd-target.tgz /tmp
+# Install ConfD in the container.  Note that ${targetpkg} is not the
+# regular ConfD "installler" installation, instead we only include the
+# files required for a minimal target installation as described in
+# section 32.2.  Installing ConfD on a target system in the ConfD User
+# Guide.
+COPY --chown=confd:confd resources/${targetpkg} /tmp
 USER confd
-RUN tar xzf /tmp/confd-target.tgz -C ${CONFD_DIR} && rm /tmp/confd-target.tgz
+RUN tar xzf /tmp/${targetpkg} -C ${CONFD_DIR} && rm /tmp/${targetpkg}
 
 # Generate host key and create internal "state" directories referenced
 # by the default confd.conf from the package above.
