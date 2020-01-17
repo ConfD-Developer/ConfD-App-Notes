@@ -21,12 +21,12 @@ Steps
    a container image containing the ConfD client application, is sent
    to stdout.
 
-`$ docker run --rm --env STDOUT=1 -v path/to/src-code:/src-code app-builder:v7.3 /src-code > app.tgz`
+`$ docker run --rm --env STDOUT=1 -v path/to/app/src:/src app-builder:v7.3 /src > app.tgz`
 
 3. It's also possible to keep the container around and copy the
    resulting tar-ball using the docker cp command from the container
    to the host
 
-`$ docker run --name app-builder app-builder:v7.3`
-`$ docker cp app-builder:/app.tgz .`
+`$ docker run  --name app-builder -v path/to/app/src:/srcapp-builder:v7.3 /src`
+`$ docker cp app-builder:/tmp/build-result.tgz .`
 `$ docker container rm app-builder`

@@ -12,10 +12,11 @@ main() {
         cp -f $(find . -maxdepth 1 -type f -executable) /build-result
         [ -f confd.conf ] && cp *.fxs confd.conf ssh-keydir/* confd-cdb/aaa_init.xml /build-result
         [ -f /build-result/confd.conf ] && sed -i 's:  <loadPath>:  <!-- Allow IPC connections from non-localhost clinets -->\n  <confdIpcAddress>\n    <ip>0.0.0.0</ip>\n  </confdIpcAddress>\n\n  <!-- The IPC access token ensures that only clients that know the token\n       can connect to the IPC port. -->\n  <confdIpcAccessCheck>\n    <enabled>true</enabled>\n    <filename>/confd/secrets/access.txt</filename>\n  </confdIpcAccessCheck>\n\n  <loadPath>:;s:<sshServerKeyDir>./ssh-keydir</sshServerKeyDir>:<sshServerKeyDir>/confd/secrets</sshServerKeyDir>:' /build-result/confd.conf
+        tar czf /tmp/build-result.tgz -C /build-result .
+        make clean
     } >&2
 
-    [[ $STDOUT ]] && tar czf - -C / build-result
-    make clean
+    [[ $STDOUT ]] && cat /tmp/build-result.tgz
 }
 
 main "$@"
