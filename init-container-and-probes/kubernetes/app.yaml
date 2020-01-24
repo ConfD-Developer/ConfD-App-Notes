@@ -21,11 +21,11 @@ spec:
           secretName: app-secrets
       initContainers:
       - name: wait-for-phase2
-        image: confd-cmd:v7.3
+        image: confdup:v7.3
         command:
         - sh
         - "-c"
-        - "until confd_cmd -a confd -c get_phase 2> /dev/null | grep -q \"phase: 2\"; do echo \"Waiting for confd to reach phase2...\"; sleep 2; done; echo done"
+        - "until confdup -a confd 2> /dev/null; do echo \"Waiting for confd to reach phase2...\"; sleep 2; done; echo done"
         env:
         - name: CONFD_IPC_ACCESS_FILE
           value: "/app/secrets/access.txt"
